@@ -1,28 +1,73 @@
-# Kafka Consumer and Producer
+# Kafka producer and consumer sample
 
-This is the README file for a sample of Kafka project with Producer and Consumer and the configurations.
+This project contains a Spring Boot Kafka producer (`book-driver`) and consumer
+(`book-user`).
 
-### Spring Application Name
-- **Description**: Specifies the name of the Spring Boot application.
+## Run Kafka locally
 
-#### Kafka Configuration
-    - `.\zookeeper-server-start.bat ..\..\config\zookeeper.properties`:  Run the Zookeeper in order to used by Brokers
-    - to determine which Broker is the leader of which Partition
-    - `.\kafka-server-start.bat ..\..\config\server.properties`: to run Kafka environment running and ready to use
-    - `.\kafka-topics.bat --create --topic TOPIC_NAME --bootstrap-server localhost:9092`: to create a Topic through cmdl
+The repository uses Kafka in **KRaft mode**, so ZooKeeper is not required.
+Docker Desktop must be running.
 
-## Starting the Application
-- **Request**: PUT
-- **API**: `http://localhost:8082/cab-locations/update`
+```powershell
+docker compose up -d
+```
 
-### 1. Setting Environment Variables and Running Main Function in CoffeePlaceApplication.java
-- Set the required environment
-  variables (`KAFKA`, `ZOOKEEPER`, `SPRINGBOOTAPPLICATION`)
-  according to your environment and requirements.
-- Run the `producer` function in the `DriverApplication.java`.
-- Run the `listener` function in the `UserApplication.java`.
+Kafka is available at `localhost:9092`. The `book-driver` application creates
+the following topics, each with three partitions:
 
-```bash
-recent-consumer-msgs .\bin/kafka-console-consumer.bat --topic TOPIC_NAME --bootstrap-server localhost:9092
-all-consumer-msgs .\bin/kafka-console-consumer.bat --topic TOPIC_NAME --from beginning --bootstrap-server localhost:9092
+| Topic | Purpose |
+| --- | --- |
+| `cab-location` | Cab location updates |
+| `cab-order` | Cab order events |
+| `cab-status` | Cab status events |
+
+Kafka preserves message order **within one partition**, not across all
+partitions. When events for the same cab or order must remain ordered, send
+them with the same Kafka key so they are routed to the same partition.
+
+To stop Kafka:
+
+```powershell
+docker compose down
+```
+
+## Run the applications
+
+Start the applications from separate terminals:
+
+```powershell
+cd book-user
+.\mvnw.cmd spring-boot:run
+```
+
+```powershell
+cd book-driver
+.\mvnw.cmd spring-boot:run
+```
+
+The producer API is available at:
+
+```text
+PUT http://localhost:8082/cab-locations/update
+```
+
+## Inspect messages
+
+With Kafka running, use the Kafka command-line tools:
+
+```powershell
+.\bin\kafka-console-consumer.bat --topic cab-location --bootstrap-server localhost:9092
+.\bin\kafka-console-consumer.bat --topic cab-location --from-beginning --bootstrap-server localhost:9092
+.\bin\kafka-topics.bat --list --bootstrap-server localhost:9092
+.\bin\kafka-topics.bat --describe --topic cab-order --bootstrap-server localhost:9092
+```
+
+## Tests
+
+`book-user` integration tests use Spring Kafka's embedded broker with a
+dynamically assigned port. They do not require Docker, Kafka, or ZooKeeper.
+
+```powershell
+cd book-user
+.\mvnw.cmd test
 ```

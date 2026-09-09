@@ -14,13 +14,10 @@ import java.util.concurrent.TimeUnit;
 import static org.awaitility.Awaitility.await;
 
 @SpringBootTest
-@EmbeddedKafka(partitions = 1, brokerProperties = {
-    "listeners=PLAINTEXT://localhost:9092",
-    "port=9092"
-})
+@EmbeddedKafka(partitions = 3, topics = {"cab-location", "cab-order", "cab-status"})
 @TestPropertySource(properties = {
-    "spring.kafka.bootstrap-servers=localhost:9092",
-    "spring.kafka.consumer.bootstrap-servers=localhost:9092"
+    "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
+    "spring.kafka.consumer.bootstrap-servers=${spring.embedded.kafka.brokers}"
 })
 @DisplayName("LocationService Integration Tests")
 class LocationServiceIT {
@@ -102,11 +99,10 @@ class LocationServiceIT {
 
     @Test
     @DisplayName("Should handle large payload from Kafka")
-    void testLargePayload() throws InterruptedException {
+    void testLargePayload() throws Exception {
         String largeLocation = "Location-" + "A".repeat(1000);
         
-        kafkaTemplate.send("cab-location", largeLocation);
-        Thread.sleep(2000);
+        kafkaTemplate.send("cab-location", largeLocation).get(10, TimeUnit.SECONDS);
     }
 
     @Test
